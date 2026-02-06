@@ -44,7 +44,6 @@ def build_bundle(df: pd.DataFrame) -> dict:
 # -------------------------
 # Sidebar
 # -------------------------
-# Sidebar
 st.sidebar.title("Menú")
 uploaded = st.sidebar.file_uploader("Subir saber_pro.csv", type=["csv"])
 
@@ -67,15 +66,13 @@ if uploaded_name.lower() != EXPECTED_NAME.lower():
     )
     st.stop()
 
-
-# -------------------------
-# Navegación (definir page)
-# -------------------------
+# ✅ NAVEGACIÓN (ANTES NO EXISTÍA -> NameError)
 page = st.sidebar.radio(
     "Ir a",
     ["Resumen", "Procesamiento", "KPI", "EDA", "Groq IA"],
     index=0
 )
+
 
 # -------------------------
 # Splash + progreso (primera carga)
@@ -245,13 +242,13 @@ elif page == "EDA":
         st.subheader("Pares correlacionados (|corr| > 0.7)")
         st.dataframe(correlation_pairs(data_imp, threshold=0.7), width="stretch")
 
-        num_cols = [c for c in ["RENDIMIENTO_GLOBAL","INDICADOR_1","INDICADOR_2","INDICADOR_3","INDICADOR_4"]
+        num_cols = [c for c in ["RENDIMIENTO_GLOBAL", "INDICADOR_1", "INDICADOR_2", "INDICADOR_3", "INDICADOR_4"]
                     if c in data_imp.columns]
         st.subheader("Kruskal numéricas vs target")
         st.dataframe(kruskal_numeric_vs_target(data_imp, num_cols=num_cols), width="stretch")
 
         st.subheader("Outliers por clase (IQR) — indicadores")
-        vars_num = [c for c in ["INDICADOR_1","INDICADOR_2"] if c in data_imp.columns]
+        vars_num = [c for c in ["INDICADOR_1", "INDICADOR_2"] if c in data_imp.columns]
         st.dataframe(outliers_by_class(data_imp, vars_num=vars_num), width="stretch")
 
     with tab2:
@@ -266,32 +263,49 @@ elif page == "EDA":
 
     with tab3:
         st.subheader("Gráficas")
-
-        options = ["Distribución del target"]
         TARGET = "RENDIMIENTO_GLOBAL"
+
+        # ✅ NOMBRES “DE NEGOCIO” (preguntas)
+        options = ["¿Cómo está distribuido el rendimiento académico?"]
 
         if TARGET in data_imp.columns:
             if "F_ESTRATOVIVIENDA" in data_imp.columns:
-                options += ["KRAS (Estrato) - Barras", "KRAS (Estrato) - Gradiente"]
+                options += [
+                    "¿Qué tan grande es la brecha por estrato socioeconómico?",
+                    "¿Cómo cambia el riesgo a través de los estratos?"
+                ]
             if "F_TIENECOMPUTADOR" in data_imp.columns:
-                options += ["FD (Computador) - Barras", "FD (Computador) - Interacción"]
+                options += [
+                    "¿Hay brecha por acceso a computador?",
+                    "¿La brecha por computador cambia según el estrato?"
+                ]
             if "F_EDUCACIONMADRE" in data_imp.columns:
-                options += ["KCC (Educación madre) - Barras", "KCC (Educación madre) - Distribución"]
+                options += [
+                    "¿Hay brecha por educación de la madre?",
+                    "¿Qué niveles de educación materna tienen mayor riesgo?"
+                ]
             if "REGION" in data_imp.columns:
-                options += ["Riesgo regional (pérdida)"]
+                options += ["¿Qué regiones están mejor/peor en riesgo?"]
 
             if "kpi_dept" in kpi_pack and not kpi_pack["kpi_dept"].empty:
-                options += ["Impacto Top-10 (casos)", "Impacto (burbuja riesgo vs casos)"]
+                options += [
+                    "¿Qué departamentos concentran más casos (top)?",
+                    "¿Cómo priorizar departamentos por impacto vs riesgo?"
+                ]
 
             if "kpi_region" in kpi_pack and not kpi_pack["kpi_region"].empty:
-                options += ["Impacto por región (casos)"]
+                options += ["¿Qué regiones concentran más casos (impacto absoluto)?"]
+
+            # ✅ NUEVA: BRECHA DEPARTAMENTAL (RIESGO)
+            if "E_PRGM_DEPARTAMENTO" in data_imp.columns:
+                options += ["¿Qué departamentos están mejor/peor en riesgo?"]
 
         choice = st.selectbox("Seleccione la gráfica", options, index=0)
 
-        if choice == "Distribución del target":
+        if choice == "¿Cómo está distribuido el rendimiento académico?":
             st.pyplot(charts.fig_target_distribution(data_imp), clear_figure=True)
 
-        elif choice == "KRAS (Estrato) - Barras":
+        elif choice == "¿Qué tan grande es la brecha por estrato socioeconómico?":
             low_str = data_imp["F_ESTRATOVIVIENDA"].isin([1, 2])
             high_str = data_imp["F_ESTRATOVIVIENDA"].isin([5, 6])
             p_low = float((data_imp.loc[low_str, TARGET] == 0).mean()) if low_str.any() else np.nan
@@ -299,11 +313,11 @@ elif page == "EDA":
             kras = p_low - p_high
             st.pyplot(charts.fig_kras_bar(p_low, p_high, kras), clear_figure=True)
 
-        elif choice == "KRAS (Estrato) - Gradiente":
+        elif choice == "¿Cómo cambia el riesgo a través de los estratos?":
             fig = charts.fig_kras_gradient(data_imp)
-            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de gradiente.")
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura (revise datos).")
 
-        elif choice == "FD (Computador) - Barras":
+        elif choice == "¿Hay brecha por acceso a computador?":
             no_pc = (data_imp["F_TIENECOMPUTADOR"] == 0)
             pc = (data_imp["F_TIENECOMPUTADOR"] == 1)
             p_no = float((data_imp.loc[no_pc, TARGET] == 0).mean()) if no_pc.any() else np.nan
@@ -311,37 +325,65 @@ elif page == "EDA":
             fd = p_no - p_pc
             st.pyplot(charts.fig_fd_bar(p_no, p_pc, fd), clear_figure=True)
 
-        elif choice == "FD (Computador) - Interacción":
+        elif choice == "¿La brecha por computador cambia según el estrato?":
             fig = charts.fig_fd_interaction(data_imp)
-            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de interacción.")
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura (revise columnas).")
 
-        elif choice == "KCC (Educación madre) - Barras":
-            low_mom = data_imp["F_EDUCACIONMADRE"].isin(["Ninguno","Primaria incompleta","Primaria completa"])
-            high_mom = data_imp["F_EDUCACIONMADRE"].isin(["Educación profesional completa","Postgrado","Posgrado","Postgrado completo"])
+        elif choice == "¿Hay brecha por educación de la madre?":
+            low_mom = data_imp["F_EDUCACIONMADRE"].isin(["Ninguno", "Primaria incompleta", "Primaria completa"])
+            high_mom = data_imp["F_EDUCACIONMADRE"].isin(["Educación profesional completa", "Postgrado", "Posgrado", "Postgrado completo"])
             p_low = float((data_imp.loc[low_mom, TARGET] == 0).mean()) if low_mom.any() else np.nan
             p_high = float((data_imp.loc[high_mom, TARGET] == 0).mean()) if high_mom.any() else np.nan
             kcc = p_low - p_high
             st.pyplot(charts.fig_kcc_bar(p_low, p_high, kcc), clear_figure=True)
 
-        elif choice == "KCC (Educación madre) - Distribución":
+        elif choice == "¿Qué niveles de educación materna tienen mayor riesgo?":
             fig = charts.fig_kcc_mother_education(data_imp)
-            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de educación de la madre.")
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura (revise datos).")
 
-        elif choice == "Riesgo regional (pérdida)":
+        elif choice == "¿Qué regiones están mejor/peor en riesgo?":
             regional_risk = data_imp.groupby("REGION")[TARGET].apply(lambda x: (x == 0).mean()).sort_values()
             st.pyplot(charts.fig_regional_risk(regional_risk), clear_figure=True)
 
-        elif choice == "Impacto Top-10 (casos)":
+            best = regional_risk.idxmin()
+            worst = regional_risk.idxmax()
+            brecha_pp = (regional_risk.loc[worst] - regional_risk.loc[best]) * 100
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Mejor región (menor riesgo)", f"{best}", f"{regional_risk.loc[best]*100:.2f}%")
+            c2.metric("Peor región (mayor riesgo)", f"{worst}", f"{regional_risk.loc[worst]*100:.2f}%")
+            c3.metric("Brecha (pp)", f"{brecha_pp:.2f}", "puntos porcentuales")
+
+        elif choice == "¿Qué departamentos concentran más casos (top)?":
             st.pyplot(charts.fig_top10_impact(kpi_pack["kpi_dept"], top_n=10), clear_figure=True)
 
-        elif choice == "Impacto (burbuja riesgo vs casos)":
+        elif choice == "¿Cómo priorizar departamentos por impacto vs riesgo?":
             st.pyplot(
                 charts.fig_impact_risk_bubble(kpi_pack["kpi_dept"], p_nat=kpi_pack.get("p_nat"), top_n=40),
                 clear_figure=True
             )
 
-        elif choice == "Impacto por región (casos)":
+        elif choice == "¿Qué regiones concentran más casos (impacto absoluto)?":
             st.pyplot(charts.fig_region_impact_cases(kpi_pack["kpi_region"]), clear_figure=True)
+
+        # ✅ NUEVA: BRECHA DEPARTAMENTAL (RIESGO)
+        elif choice == "¿Qué departamentos están mejor/peor en riesgo?":
+            dept_col = "E_PRGM_DEPARTAMENTO"
+            regional_risk_d = (
+                data_imp.groupby(dept_col)[TARGET]
+                .apply(lambda x: (x == 0).mean())
+                .sort_values()
+            )
+
+            st.pyplot(charts.fig_dept_risk(regional_risk_d), clear_figure=True)
+
+            best = regional_risk_d.idxmin()
+            worst = regional_risk_d.idxmax()
+            brecha_pp = (regional_risk_d.loc[worst] - regional_risk_d.loc[best]) * 100
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Mejor departamento (menor riesgo)", f"{best}", f"{regional_risk_d.loc[best]*100:.2f}%")
+            c2.metric("Peor departamento (mayor riesgo)", f"{worst}", f"{regional_risk_d.loc[worst]*100:.2f}%")
+            c3.metric("Brecha (pp)", f"{brecha_pp:.2f}", "puntos porcentuales")
 
 
 elif page == "Groq IA":
@@ -353,4 +395,5 @@ elif page == "Groq IA":
         st.error("Falló la página de Groq IA. Revise el detalle abajo.")
         st.exception(e)
         st.stop()
+
 
