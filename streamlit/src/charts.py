@@ -289,13 +289,13 @@ def fig_regional_risk(regional_risk):
     best_idx = labels.index(best)
     worst_idx = labels.index(worst)
 
-    ax.bar(best_idx, values[best_idx], color="#2E7D32", label="Mejor región")
-    ax.bar(worst_idx, values[worst_idx], color="#C62828", label="Peor región")
+    ax.bar(best_idx, values[best_idx], color="#2E7D32", label="Mejor región (menor riesgo)")
+    ax.bar(worst_idx, values[worst_idx], color="#C62828", label="Peor región (mayor riesgo)")
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=90)
     ax.set_ylabel("Proporción de bajo rendimiento")
-    ax.set_xlabel("Region")
+    ax.set_xlabel("Región")
     ax.set_title("Brecha regional de bajo rendimiento")
     ax.axhline(regional_risk.mean(), linestyle="--", label="Promedio nacional")
     ax.legend()
@@ -303,7 +303,7 @@ def fig_regional_risk(regional_risk):
     return fig
 
 
-# 9) KPI territorial depto (riesgo)
+# 9) KPI territorial depto (riesgo) ✅ AJUSTADO A “DEPARTAMENTO”
 def fig_dept_risk(regional_risk_d):
     labels = regional_risk_d.index.tolist()
     values = regional_risk_d.values
@@ -318,14 +318,14 @@ def fig_dept_risk(regional_risk_d):
     best_idx = labels.index(best)
     worst_idx = labels.index(worst)
 
-    ax.bar(best_idx, values[best_idx], color="#2E7D32", label="Mejor región")
-    ax.bar(worst_idx, values[worst_idx], color="#C62828", label="Peor región")
+    ax.bar(best_idx, values[best_idx], color="#2E7D32", label="Mejor departamento (menor riesgo)")
+    ax.bar(worst_idx, values[worst_idx], color="#C62828", label="Peor departamento (mayor riesgo)")
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=90)
     ax.set_ylabel("Proporción de bajo rendimiento")
     ax.set_xlabel("Departamento")
-    ax.set_title("Brecha Departamental de bajo rendimiento")
+    ax.set_title("Brecha departamental de bajo rendimiento")
     ax.axhline(regional_risk_d.mean(), linestyle="--", label="Promedio nacional")
     ax.legend()
     plt.tight_layout()
