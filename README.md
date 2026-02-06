@@ -14,3 +14,7 @@ En este proyecto se plantea el uso de técnicas de ciencia de datos para analiza
 - Juan Camilo Cataño Zuleta
 - Juan Manuel Agudelo Olarte
 - Carlos José Muñoz Cabrera
+
+## Streamlit
+
+Para acceder a la aplicación de streamlit, hacer clic en [SaberPro](https://final-fundamentos-ciencia-datos.streamlit.app/)
