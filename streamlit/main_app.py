@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.ui import apply_css, kpi_card
+from src.ui import apply_css, kpi_card, show_splash, hide_splash
 from src.data import preprocess_all
 from src.kpis import compute_kpi_tables, KPI_TEXT
 from src.eda import (
