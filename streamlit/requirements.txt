@@ -1,0 +1,15 @@
+streamlit>=1.30
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+altair
+scipy
+python-dateutil
+statsmodels
+scikit-learn
+ftfy
+pyarrow
+openpyxl
+groq
