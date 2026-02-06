@@ -1,5 +1,4 @@
 # app.py
-# streamlit run app.py
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -18,6 +17,16 @@ from src.groq_page import render_groq_page
 st.set_page_config(page_title="Saber Pro - Dashboard", layout="wide")
 apply_css()
 
+
+@st.cache_data(show_spinner=True)
+def load_csv(file) -> pd.DataFrame:
+    return pd.read_csv(file)
+
+@st.cache_data(show_spinner=True)
+def build_bundle(df: pd.DataFrame) -> dict:
+    return preprocess_all(df)
+
+
 st.sidebar.title("Menú")
 uploaded = st.sidebar.file_uploader("Subir saber_pro.csv", type=["csv"])
 
@@ -32,6 +41,7 @@ if not uploaded:
     st.info("Cargue el archivo **saber_pro.csv** para comenzar.")
     st.stop()
 
+# Splash + progreso
 show_splash("Cargando Saber Pro — Dashboard")
 
 progress = st.progress(0)
@@ -54,21 +64,6 @@ with st.status("Construyendo el dashboard…", expanded=True) as status:
     status.update(label="Listo ✅", state="complete", expanded=False)
 
 hide_splash()
-
-
-@st.cache_data(show_spinner=True)
-def load_csv(file) -> pd.DataFrame:
-    return pd.read_csv(file)
-
-@st.cache_data(show_spinner=True)
-def build_bundle(df: pd.DataFrame) -> dict:
-    return preprocess_all(df)
-
-data_raw = load_csv(uploaded)
-bundle = build_bundle(data_raw)
-data_imp = bundle["data_imp"]
-kpi_pack = compute_kpi_tables(data_imp)
-
 
 # =========================
 # Páginas
