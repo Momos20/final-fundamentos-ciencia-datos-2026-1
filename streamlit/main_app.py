@@ -27,13 +27,15 @@ CSS = """
   box-shadow: 0 1px 10px rgba(0,0,0,0.04);
   height: 100%;
 }
-.kpi-title { font-size: 12px; color: #666; margin-bottom: 8px; }
-.kpi-value { font-size: 28px; font-weight: 700; margin: 0; }
-.kpi-sub { font-size: 12px; color: #888; margin-top: 6px; line-height: 1.3; }
-.small-note { font-size: 12px; color: #666; }
+
+/* 🔥 Fijar colores (evita que el dark theme los vuelva blancos) */
+.kpi-title { font-size: 12px; color: #6b7280 !important; margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 700; margin: 0; color: #111827 !important; }
+.kpi-sub   { font-size: 12px; color: #6b7280 !important; margin-top: 6px; line-height: 1.3; }
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
+
 
 
 def kpi_card(title: str, value: str, sub: str = ""):
