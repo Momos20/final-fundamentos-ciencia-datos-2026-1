@@ -18,3 +18,6 @@ En este proyecto se plantea el uso de técnicas de ciencia de datos para analiza
 ## Streamlit
 
 Para acceder a la aplicación de streamlit, hacer clic en [SaberPro](https://final-fundamentos-ciencia-datos.streamlit.app/)
+
+## Créditos
+RLX. UDEA/ai4eng 20252 - Pruebas Saber Pro Colombia. https://kaggle.com/competitions/udea-ai-4-eng-20252-pruebas-saber-pro-colombia, 2025. Kaggle.
