@@ -12,7 +12,7 @@ from src.eda import (
 )
 from src import charts
 from src.groq_page import render_groq_page
-
+from mappings import grupo_dict_programas, grupo_dict_regiones
 
 st.set_page_config(page_title="Saber Pro - Dashboard", layout="wide")
 apply_css()
