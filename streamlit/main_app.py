@@ -36,7 +36,7 @@ apply_css()
 def load_csv(file) -> pd.DataFrame:
     return pd.read_csv(file)
 
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=False)
 def build_bundle(df: pd.DataFrame) -> dict:
     return preprocess_all(df)
 
@@ -62,28 +62,31 @@ if not uploaded:
 # -------------------------
 # Splash + progreso (primera carga)
 # -------------------------
-show_splash("Cargando Saber Pro — Dashboard")
+splash_ph = show_splash("Cargando Saber Pro — Dashboard")
 
 progress = st.progress(0)
-with st.status("Construyendo el dashboard…", expanded=True) as status:
-    status.write("Leyendo CSV…")
-    progress.progress(10)
+try:
+    with st.status("Construyendo el dashboard…", expanded=True) as status:
+        status.write("Leyendo CSV…")
+        progress.progress(10)
 
-    data_raw = load_csv(uploaded)
-    progress.progress(35)
+        data_raw = load_csv(uploaded)
+        progress.progress(35)
 
-    status.write("Preprocesando e imputando…")
-    bundle = build_bundle(data_raw)
-    progress.progress(75)
+        status.write("Preprocesando e imputando…")
+        bundle = build_bundle(data_raw)
+        progress.progress(80)
 
-    status.write("Calculando KPIs…")
-    data_imp = bundle["data_imp"]
-    kpi_pack = compute_kpi_tables(data_imp)
-    progress.progress(100)
+        status.write("Calculando KPIs…")
+        data_imp = bundle["data_imp"]
+        kpi_pack = compute_kpi_tables(data_imp)
+        progress.progress(100)
 
-    status.update(label="Listo ✅", state="complete", expanded=False)
+        status.update(label="Listo ✅", state="complete", expanded=False)
 
-hide_splash()
+finally:
+    progress.empty()
+    hide_splash(splash_ph)
 
 
 # =========================
