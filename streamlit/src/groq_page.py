@@ -3,13 +3,9 @@ import json
 import requests
 import streamlit as st
 
-DEFAULT_MODEL = "llama-3.1-70b-versatile"
+DEFAULT_MODEL = "llama-3.1-8b-instant"
 
 def groq_chat_completion(api_key: str, model: str, messages: list, temperature: float = 0.2, max_tokens: int = 600):
-    """
-    Llama a Groq (OpenAI-compatible chat completions).
-    Si su endpoint difiere, se ajusta en 30 segundos.
-    """
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -26,9 +22,6 @@ def groq_chat_completion(api_key: str, model: str, messages: list, temperature: 
     return r.json()
 
 def build_dataset_brief(bundle: dict, kpi_pack: dict) -> str:
-    """
-    Resumen corto para contexto (sin volverse enorme).
-    """
     data_raw = bundle["data_raw"]
     data_imp = bundle["data_imp"]
 
@@ -38,15 +31,15 @@ def build_dataset_brief(bundle: dict, kpi_pack: dict) -> str:
     lines.append(f"- Nulos promedio (%): {data_raw.isna().mean().mean()*100:.2f}")
     lines.append(f"- Kruskal (N_NULOS vs target) p-value: {bundle.get('kw_p')}")
     lines.append(f"- Dataset procesado: filas {data_imp.shape[0]}, columnas {data_imp.shape[1]}")
-    if "p_nat" in kpi_pack:
+    if "p_nat" in kpi_pack and kpi_pack["p_nat"] is not None:
         lines.append(f"- P(nacional) bajo: {kpi_pack['p_nat']*100:.2f}%")
-    if "KRAS" in kpi_pack:
+    if "KRAS" in kpi_pack and kpi_pack["KRAS"] is not None:
         lines.append(f"- KRAS (pp): {kpi_pack['KRAS']*100:.2f}")
-    if "FD" in kpi_pack:
+    if "FD" in kpi_pack and kpi_pack["FD"] is not None:
         lines.append(f"- FD (pp): {kpi_pack['FD']*100:.2f}")
-    if "KCC" in kpi_pack:
+    if "KCC" in kpi_pack and kpi_pack["KCC"] is not None:
         lines.append(f"- KCC (pp): {kpi_pack['KCC']*100:.2f}")
-    if "KDS" in kpi_pack:
+    if "KDS" in kpi_pack and kpi_pack["KDS"] is not None:
         lines.append(f"- KDS: {kpi_pack['KDS']:.4f}")
 
     return "\n".join(lines)
@@ -58,7 +51,16 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
     with st.sidebar:
         st.subheader("Configuración Groq")
         api_key = st.text_input("Groq API Key", type="password", help="Se usa solo en esta sesión.")
-        model = st.text_input("Modelo", value=DEFAULT_MODEL)
+
+        model = st.selectbox(
+            "Modelo",
+            options=[
+                "llama-3.1-8b-instant",
+                "llama-3.3-70b-versatile",
+            ],
+            index=0
+        )
+
         temperature = st.slider("Temperature", 0.0, 1.0, 0.2, 0.05)
         max_tokens = st.slider("Max tokens", 100, 1500, 600, 50)
         include_context = st.checkbox("Incluir contexto del dataset (recomendado)", value=True)
@@ -78,7 +80,6 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             st.error("Ingrese la Groq API Key en la barra lateral para poder usar el asistente.")
             return
 
-        # Construcción de prompt
         system = (
             "Usted es un analista de datos senior. Responda en español, claro y accionable. "
             "Cuando proponga hallazgos, evite causalidad (solo asociaciones) y sugiera evidencia cuantitativa."
@@ -90,12 +91,10 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             brief = build_dataset_brief(bundle, kpi_pack)
             messages.append({"role": "system", "content": brief})
 
-        # Historial corto (para no crecer infinito)
         history = st.session_state.groq_chat[-10:]
         messages.extend(history)
         messages.append({"role": "user", "content": user_msg})
 
-        # Mostrar user
         st.session_state.groq_chat.append({"role": "user", "content": user_msg})
         with st.chat_message("user"):
             st.markdown(user_msg)
