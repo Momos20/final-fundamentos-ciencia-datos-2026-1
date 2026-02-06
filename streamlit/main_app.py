@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.ui import apply_css, kpi_card, show_splash, hide_splash
+from src.ui import apply_css, kpi_card, show_splash, update_splash, hide_splash
 from src.data import preprocess_all
 from src.kpis import compute_kpi_tables, KPI_TEXT
 from src.eda import (
@@ -32,7 +32,7 @@ apply_css()
 # -------------------------
 # Carga / caché
 # -------------------------
-@st.cache_data(show_spinner=True)
+@st.cache_data(show_spinner=False)
 def load_csv(file) -> pd.DataFrame:
     return pd.read_csv(file)
 
@@ -62,31 +62,28 @@ if not uploaded:
 # -------------------------
 # Splash + progreso (primera carga)
 # -------------------------
-splash_ph = show_splash("Cargando Saber Pro — Dashboard")
+splash = show_splash("Cargando Saber Pro — Dashboard", "Iniciando…")
 
 progress = st.progress(0)
 try:
-    with st.status("Construyendo el dashboard…", expanded=True) as status:
-        status.write("Leyendo CSV…")
-        progress.progress(10)
+    update_splash(splash, "Leyendo CSV…", "Cargando el archivo y preparando memoria…")
+    progress.progress(10)
+    data_raw = load_csv(uploaded)
+    progress.progress(35)
 
-        data_raw = load_csv(uploaded)
-        progress.progress(35)
+    update_splash(splash, "Preprocesando e imputando…", "Aplicando auditoría de nulos y reglas de imputación…")
+    bundle = build_bundle(data_raw)
+    progress.progress(80)
 
-        status.write("Preprocesando e imputando…")
-        bundle = build_bundle(data_raw)
-        progress.progress(80)
+    update_splash(splash, "Calculando KPIs…", "Construyendo tablas y métricas principales…")
+    data_imp = bundle["data_imp"]
+    kpi_pack = compute_kpi_tables(data_imp)
+    progress.progress(100)
 
-        status.write("Calculando KPIs…")
-        data_imp = bundle["data_imp"]
-        kpi_pack = compute_kpi_tables(data_imp)
-        progress.progress(100)
-
-        status.update(label="Listo ✅", state="complete", expanded=False)
-
+    update_splash(splash, "Listo ✅", "Cargando vistas…")
 finally:
     progress.empty()
-    hide_splash(splash_ph)
+    hide_splash(splash)
 
 
 # =========================
