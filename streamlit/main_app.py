@@ -214,60 +214,93 @@ elif page == "EDA":
 
     with tab3:
         st.subheader("Gráficas")
-        # Target
-        st.pyplot(charts.fig_target_distribution(data_imp), clear_figure=True)
-
-        # KPI KRAS / FD / KCC + extras si hay columnas
+    
+        # Opciones base (se activan según columnas disponibles)
+        options = ["Distribución del target"]
+    
         TARGET = "RENDIMIENTO_GLOBAL"
         if TARGET in data_imp.columns:
-            # KRAS figs
             if "F_ESTRATOVIVIENDA" in data_imp.columns:
-                low_str = data_imp["F_ESTRATOVIVIENDA"].isin([1,2])
-                high_str = data_imp["F_ESTRATOVIVIENDA"].isin([5,6])
-                p_low = float((data_imp.loc[low_str, TARGET] == 0).mean()) if low_str.any() else np.nan
-                p_high = float((data_imp.loc[high_str, TARGET] == 0).mean()) if high_str.any() else np.nan
-                kras = p_low - p_high
-                st.pyplot(charts.fig_kras_bar(p_low, p_high, kras), clear_figure=True)
-                fig = charts.fig_kras_gradient(data_imp)
-                if fig is not None:
-                    st.pyplot(fig, clear_figure=True)
-
-            # FD figs
+                options += ["KRAS (Estrato) - Barras", "KRAS (Estrato) - Gradiente"]
             if "F_TIENECOMPUTADOR" in data_imp.columns:
-                no_pc = (data_imp["F_TIENECOMPUTADOR"] == 0)
-                pc = (data_imp["F_TIENECOMPUTADOR"] == 1)
-                p_no = float((data_imp.loc[no_pc, TARGET] == 0).mean()) if no_pc.any() else np.nan
-                p_pc = float((data_imp.loc[pc, TARGET] == 0).mean()) if pc.any() else np.nan
-                fd = p_no - p_pc
-                st.pyplot(charts.fig_fd_bar(p_no, p_pc, fd), clear_figure=True)
-                fig = charts.fig_fd_interaction(data_imp)
-                if fig is not None:
-                    st.pyplot(fig, clear_figure=True)
-
-            # KCC figs
+                options += ["FD (Computador) - Barras", "FD (Computador) - Interacción"]
             if "F_EDUCACIONMADRE" in data_imp.columns:
-                low_mom = data_imp["F_EDUCACIONMADRE"].isin(["Ninguno","Primaria incompleta","Primaria completa"])
-                high_mom = data_imp["F_EDUCACIONMADRE"].isin(["Educación profesional completa","Postgrado","Posgrado","Postgrado completo"])
-                p_low = float((data_imp.loc[low_mom, TARGET] == 0).mean()) if low_mom.any() else np.nan
-                p_high = float((data_imp.loc[high_mom, TARGET] == 0).mean()) if high_mom.any() else np.nan
-                kcc = p_low - p_high
-                st.pyplot(charts.fig_kcc_bar(p_low, p_high, kcc), clear_figure=True)
-                fig = charts.fig_kcc_mother_education(data_imp)
-                if fig is not None:
-                    st.pyplot(fig, clear_figure=True)
-
-            # Regional
+                options += ["KCC (Educación madre) - Barras", "KCC (Educación madre) - Distribución"]
             if "REGION" in data_imp.columns:
-                regional_risk = data_imp.groupby("REGION")[TARGET].apply(lambda x: (x==0).mean()).sort_values()
-                st.pyplot(charts.fig_regional_risk(regional_risk), clear_figure=True)
-
-            # Impacto
+                options += ["Riesgo regional (pérdida)"]
+    
             if "kpi_dept" in kpi_pack and not kpi_pack["kpi_dept"].empty:
-                st.pyplot(charts.fig_top10_impact(kpi_pack["kpi_dept"], top_n=10), clear_figure=True)
-                st.pyplot(charts.fig_impact_risk_bubble(kpi_pack["kpi_dept"], p_nat=kpi_pack.get("p_nat"), top_n=40), clear_figure=True)
-
+                options += ["Impacto Top-10 (casos)", "Impacto (burbuja riesgo vs casos)"]
+    
             if "kpi_region" in kpi_pack and not kpi_pack["kpi_region"].empty:
-                st.pyplot(charts.fig_region_impact_cases(kpi_pack["kpi_region"]), clear_figure=True)
+                options += ["Impacto por región (casos)"]
+    
+        choice = st.selectbox("Seleccione la gráfica", options, index=0)
+    
+        # Render condicional
+        if choice == "Distribución del target":
+            st.pyplot(charts.fig_target_distribution(data_imp), clear_figure=True)
+    
+        elif choice == "KRAS (Estrato) - Barras":
+            low_str = data_imp["F_ESTRATOVIVIENDA"].isin([1, 2])
+            high_str = data_imp["F_ESTRATOVIVIENDA"].isin([5, 6])
+            p_low = float((data_imp.loc[low_str, TARGET] == 0).mean()) if low_str.any() else np.nan
+            p_high = float((data_imp.loc[high_str, TARGET] == 0).mean()) if high_str.any() else np.nan
+            kras = p_low - p_high
+            st.pyplot(charts.fig_kras_bar(p_low, p_high, kras), clear_figure=True)
+    
+        elif choice == "KRAS (Estrato) - Gradiente":
+            fig = charts.fig_kras_gradient(data_imp)
+            if fig is not None:
+                st.pyplot(fig, clear_figure=True)
+            else:
+                st.info("No se pudo construir la figura de gradiente.")
+    
+        elif choice == "FD (Computador) - Barras":
+            no_pc = (data_imp["F_TIENECOMPUTADOR"] == 0)
+            pc = (data_imp["F_TIENECOMPUTADOR"] == 1)
+            p_no = float((data_imp.loc[no_pc, TARGET] == 0).mean()) if no_pc.any() else np.nan
+            p_pc = float((data_imp.loc[pc, TARGET] == 0).mean()) if pc.any() else np.nan
+            fd = p_no - p_pc
+            st.pyplot(charts.fig_fd_bar(p_no, p_pc, fd), clear_figure=True)
+    
+        elif choice == "FD (Computador) - Interacción":
+            fig = charts.fig_fd_interaction(data_imp)
+            if fig is not None:
+                st.pyplot(fig, clear_figure=True)
+            else:
+                st.info("No se pudo construir la figura de interacción.")
+    
+        elif choice == "KCC (Educación madre) - Barras":
+            low_mom = data_imp["F_EDUCACIONMADRE"].isin(["Ninguno","Primaria incompleta","Primaria completa"])
+            high_mom = data_imp["F_EDUCACIONMADRE"].isin(["Educación profesional completa","Postgrado","Posgrado","Postgrado completo"])
+            p_low = float((data_imp.loc[low_mom, TARGET] == 0).mean()) if low_mom.any() else np.nan
+            p_high = float((data_imp.loc[high_mom, TARGET] == 0).mean()) if high_mom.any() else np.nan
+            kcc = p_low - p_high
+            st.pyplot(charts.fig_kcc_bar(p_low, p_high, kcc), clear_figure=True)
+    
+        elif choice == "KCC (Educación madre) - Distribución":
+            fig = charts.fig_kcc_mother_education(data_imp)
+            if fig is not None:
+                st.pyplot(fig, clear_figure=True)
+            else:
+                st.info("No se pudo construir la figura de educación de la madre.")
+    
+        elif choice == "Riesgo regional (pérdida)":
+            regional_risk = data_imp.groupby("REGION")[TARGET].apply(lambda x: (x == 0).mean()).sort_values()
+            st.pyplot(charts.fig_regional_risk(regional_risk), clear_figure=True)
+    
+        elif choice == "Impacto Top-10 (casos)":
+            st.pyplot(charts.fig_top10_impact(kpi_pack["kpi_dept"], top_n=10), clear_figure=True)
+    
+        elif choice == "Impacto (burbuja riesgo vs casos)":
+            st.pyplot(
+                charts.fig_impact_risk_bubble(kpi_pack["kpi_dept"], p_nat=kpi_pack.get("p_nat"), top_n=40),
+                clear_figure=True
+            )
+    
+        elif choice == "Impacto por región (casos)":
+            st.pyplot(charts.fig_region_impact_cases(kpi_pack["kpi_region"]), clear_figure=True)
 
 
 elif page == "Groq IA":
