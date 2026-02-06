@@ -68,6 +68,14 @@ if uploaded_name.lower() != EXPECTED_NAME.lower():
     st.stop()
 
 
+# -------------------------
+# Navegación (definir page)
+# -------------------------
+page = st.sidebar.radio(
+    "Ir a",
+    ["Resumen", "Procesamiento", "KPI", "EDA", "Groq IA"],
+    index=0
+)
 
 # -------------------------
 # Splash + progreso (primera carga)
