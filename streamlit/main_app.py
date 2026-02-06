@@ -387,8 +387,6 @@ elif page == "EDA":
 
 
 elif page == "Groq IA":
-    st.title("Groq IA")
-
     try:
         render_groq_page(bundle=bundle, kpi_pack=kpi_pack)
     except Exception as e:
