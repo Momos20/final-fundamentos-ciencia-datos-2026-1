@@ -1,4 +1,12 @@
-# app.py
+# main_app.py
+import sys
+from pathlib import Path
+
+# --- Asegura que /streamlit esté en PYTHONPATH (Streamlit Cloud friendly) ---
+ROOT = Path(__file__).parent  # carpeta streamlit/
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -12,12 +20,18 @@ from src.eda import (
 )
 from src import charts
 from src.groq_page import render_groq_page
-from mappings import grupo_dict_programas, grupo_dict_regiones
 
+
+# -------------------------
+# Config + estilos
+# -------------------------
 st.set_page_config(page_title="Saber Pro - Dashboard", layout="wide")
 apply_css()
 
 
+# -------------------------
+# Carga / caché
+# -------------------------
 @st.cache_data(show_spinner=True)
 def load_csv(file) -> pd.DataFrame:
     return pd.read_csv(file)
@@ -27,6 +41,9 @@ def build_bundle(df: pd.DataFrame) -> dict:
     return preprocess_all(df)
 
 
+# -------------------------
+# Sidebar
+# -------------------------
 st.sidebar.title("Menú")
 uploaded = st.sidebar.file_uploader("Subir saber_pro.csv", type=["csv"])
 
@@ -41,7 +58,10 @@ if not uploaded:
     st.info("Cargue el archivo **saber_pro.csv** para comenzar.")
     st.stop()
 
-# Splash + progreso
+
+# -------------------------
+# Splash + progreso (primera carga)
+# -------------------------
 show_splash("Cargando Saber Pro — Dashboard")
 
 progress = st.progress(0)
@@ -64,6 +84,7 @@ with st.status("Construyendo el dashboard…", expanded=True) as status:
     status.update(label="Listo ✅", state="complete", expanded=False)
 
 hide_splash()
+
 
 # =========================
 # Páginas
@@ -89,19 +110,19 @@ if page == "Resumen":
 
     st.subheader("Muestra de datos")
     n = st.slider("Filas a mostrar", 5, 200, 20, step=5)
-    st.dataframe(data_raw.head(n), use_container_width=True)
+    st.dataframe(data_raw.head(n), width="stretch")
 
     st.subheader("Auditoría de nulos")
     min_null = st.slider("Filtrar: nulos_% mínimo", 0.0, 100.0, 0.0, 1.0)
     audit_view = bundle["audit_df"].loc[bundle["audit_df"]["nulos_%"] >= min_null]
-    st.dataframe(audit_view, use_container_width=True)
+    st.dataframe(audit_view, width="stretch")
 
     st.subheader("Missingness (observaciones)")
     if not bundle["miss_desc"].empty:
         st.write("Descripción de N_NULOS por clase de rendimiento")
-        st.dataframe(bundle["miss_desc"], use_container_width=True)
+        st.dataframe(bundle["miss_desc"], width="stretch")
     st.write("Asociación con MISSING_HEAVY (Cramér’s V)")
-    st.dataframe(bundle["missing_assoc"].to_frame("Cramér’s V"), use_container_width=True)
+    st.dataframe(bundle["missing_assoc"].to_frame("Cramér’s V"), width="stretch")
 
 
 elif page == "Procesamiento":
@@ -110,31 +131,31 @@ elif page == "Procesamiento":
 
     st.subheader("1) Evaluación de eliminación por nulos (k>=2)")
     if not bundle["comparacion_drop"].empty:
-        st.dataframe(bundle["comparacion_drop"], use_container_width=True)
+        st.dataframe(bundle["comparacion_drop"], width="stretch")
     else:
         st.info("No se pudo construir la comparación (revise target).")
 
     st.subheader("2) Evidencia de MNAR")
     st.write(f"Kruskal-Wallis p-value: **{bundle['kw_p']}**")
-    st.dataframe(bundle["missing_assoc"].head(20).to_frame("Cramér’s V"), use_container_width=True)
+    st.dataframe(bundle["missing_assoc"].head(20).to_frame("Cramér’s V"), width="stretch")
 
     st.subheader("3) Imputación condicional por (Estrato, Departamento)")
     st.write("Variables tratadas:")
     st.code(", ".join(bundle["vars_with_nulls"]))
     st.write("Nulos restantes post-imputación (%):")
     if not bundle["nulls_after"].empty:
-        st.dataframe(bundle["nulls_after"].to_frame("nulos_%"), use_container_width=True)
+        st.dataframe(bundle["nulls_after"].to_frame("nulos_%"), width="stretch")
     else:
         st.info("No hay nulos restantes (o variables no presentes).")
 
     st.subheader("4) Validación de estabilidad (Cramér’s V Antes vs Después)")
     if not bundle["cramers_compare"].empty:
-        st.dataframe(bundle["cramers_compare"], use_container_width=True)
+        st.dataframe(bundle["cramers_compare"], width="stretch")
     else:
         st.info("No se pudo calcular la validación antes/después.")
 
     st.subheader("5) Dataset procesado (muestra)")
-    st.dataframe(data_imp.head(30), use_container_width=True)
+    st.dataframe(data_imp.head(30), width="stretch")
 
 
 elif page == "KPI":
@@ -155,45 +176,39 @@ elif page == "KPI":
 
     st.markdown("---")
 
-    # KRAS
     st.subheader("KRAS")
     st.markdown(KPI_TEXT["KRAS"])
     if "KRAS_table" in kpi_pack:
-        st.dataframe(kpi_pack["KRAS_table"], use_container_width=True)
+        st.dataframe(kpi_pack["KRAS_table"], width="stretch")
 
-    # FD
     st.subheader("FD")
     st.markdown(KPI_TEXT["FD"])
     if "FD_table" in kpi_pack:
-        st.dataframe(kpi_pack["FD_table"], use_container_width=True)
+        st.dataframe(kpi_pack["FD_table"], width="stretch")
 
-    # KCC
     st.subheader("KCC")
     st.markdown(KPI_TEXT["KCC"])
     if "KCC_table" in kpi_pack:
-        st.dataframe(kpi_pack["KCC_table"], use_container_width=True)
+        st.dataframe(kpi_pack["KCC_table"], width="stretch")
 
-    # KDS
     st.subheader("KDS")
     st.markdown(KPI_TEXT["KDS"])
     if "KDS_table" in kpi_pack and not kpi_pack["KDS_table"].empty:
-        st.dataframe(kpi_pack["KDS_table"], use_container_width=True)
+        st.dataframe(kpi_pack["KDS_table"], width="stretch")
 
-    # Equidad regional
     st.subheader("Equidad regional")
     st.markdown(KPI_TEXT["EQ_REG"])
     if "regional_risk" in kpi_pack and not kpi_pack["regional_risk"].empty:
-        st.dataframe(kpi_pack["regional_risk"], use_container_width=True)
+        st.dataframe(kpi_pack["regional_risk"], width="stretch")
 
-    # Impacto
     st.subheader("Impacto territorial")
     st.markdown(KPI_TEXT["IMPACTO"])
     if "kpi_dept" in kpi_pack and not kpi_pack["kpi_dept"].empty:
         st.write("Top 15 departamentos por casos")
-        st.dataframe(kpi_pack["kpi_dept"].head(15), use_container_width=True)
+        st.dataframe(kpi_pack["kpi_dept"].head(15), width="stretch")
     if "kpi_region" in kpi_pack and not kpi_pack["kpi_region"].empty:
         st.write("Región (casos)")
-        st.dataframe(kpi_pack["kpi_region"], use_container_width=True)
+        st.dataframe(kpi_pack["kpi_region"], width="stretch")
 
 
 elif page == "EDA":
@@ -204,40 +219,39 @@ elif page == "EDA":
 
     with tab1:
         st.subheader("Distribución del target (%)")
-        st.dataframe(target_distribution(data_imp), use_container_width=True)
+        st.dataframe(target_distribution(data_imp), width="stretch")
 
         st.subheader("Resumen estadístico")
-        st.dataframe(quantitative_summary(data_imp), use_container_width=True)
+        st.dataframe(quantitative_summary(data_imp), width="stretch")
 
         st.subheader("Pares correlacionados (|corr| > 0.7)")
-        st.dataframe(correlation_pairs(data_imp, threshold=0.7), use_container_width=True)
+        st.dataframe(correlation_pairs(data_imp, threshold=0.7), width="stretch")
 
-        # Kruskal numéricas vs target (si existen)
-        num_cols = [c for c in ["RENDIMIENTO_GLOBAL","INDICADOR_1","INDICADOR_2","INDICADOR_3","INDICADOR_4"] if c in data_imp.columns]
+        num_cols = [c for c in ["RENDIMIENTO_GLOBAL","INDICADOR_1","INDICADOR_2","INDICADOR_3","INDICADOR_4"]
+                    if c in data_imp.columns]
         st.subheader("Kruskal numéricas vs target")
-        st.dataframe(kruskal_numeric_vs_target(data_imp, num_cols=num_cols), use_container_width=True)
+        st.dataframe(kruskal_numeric_vs_target(data_imp, num_cols=num_cols), width="stretch")
 
         st.subheader("Outliers por clase (IQR) — indicadores")
         vars_num = [c for c in ["INDICADOR_1","INDICADOR_2"] if c in data_imp.columns]
-        st.dataframe(outliers_by_class(data_imp, vars_num=vars_num), use_container_width=True)
+        st.dataframe(outliers_by_class(data_imp, vars_num=vars_num), width="stretch")
 
     with tab2:
         st.subheader("Cramér’s V (categóricas vs target)")
-        st.dataframe(cramers_table(data_imp), use_container_width=True)
+        st.dataframe(cramers_table(data_imp), width="stretch")
 
         st.subheader("Perfiles categóricos (Top 15 por riesgo)")
         for col in ["F_ESTRATOVIVIENDA", "F_TIENECOMPUTADOR", "F_TIENEINTERNET", "REGION"]:
             if col in data_imp.columns:
                 st.write(f"**{col}**")
-                st.dataframe(perfil_categorico(data_imp, col), use_container_width=True)
+                st.dataframe(perfil_categorico(data_imp, col), width="stretch")
 
     with tab3:
         st.subheader("Gráficas")
-    
-        # Opciones base (se activan según columnas disponibles)
+
         options = ["Distribución del target"]
-    
         TARGET = "RENDIMIENTO_GLOBAL"
+
         if TARGET in data_imp.columns:
             if "F_ESTRATOVIVIENDA" in data_imp.columns:
                 options += ["KRAS (Estrato) - Barras", "KRAS (Estrato) - Gradiente"]
@@ -247,19 +261,18 @@ elif page == "EDA":
                 options += ["KCC (Educación madre) - Barras", "KCC (Educación madre) - Distribución"]
             if "REGION" in data_imp.columns:
                 options += ["Riesgo regional (pérdida)"]
-    
+
             if "kpi_dept" in kpi_pack and not kpi_pack["kpi_dept"].empty:
                 options += ["Impacto Top-10 (casos)", "Impacto (burbuja riesgo vs casos)"]
-    
+
             if "kpi_region" in kpi_pack and not kpi_pack["kpi_region"].empty:
                 options += ["Impacto por región (casos)"]
-    
+
         choice = st.selectbox("Seleccione la gráfica", options, index=0)
-    
-        # Render condicional
+
         if choice == "Distribución del target":
             st.pyplot(charts.fig_target_distribution(data_imp), clear_figure=True)
-    
+
         elif choice == "KRAS (Estrato) - Barras":
             low_str = data_imp["F_ESTRATOVIVIENDA"].isin([1, 2])
             high_str = data_imp["F_ESTRATOVIVIENDA"].isin([5, 6])
@@ -267,14 +280,11 @@ elif page == "EDA":
             p_high = float((data_imp.loc[high_str, TARGET] == 0).mean()) if high_str.any() else np.nan
             kras = p_low - p_high
             st.pyplot(charts.fig_kras_bar(p_low, p_high, kras), clear_figure=True)
-    
+
         elif choice == "KRAS (Estrato) - Gradiente":
             fig = charts.fig_kras_gradient(data_imp)
-            if fig is not None:
-                st.pyplot(fig, clear_figure=True)
-            else:
-                st.info("No se pudo construir la figura de gradiente.")
-    
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de gradiente.")
+
         elif choice == "FD (Computador) - Barras":
             no_pc = (data_imp["F_TIENECOMPUTADOR"] == 0)
             pc = (data_imp["F_TIENECOMPUTADOR"] == 1)
@@ -282,14 +292,11 @@ elif page == "EDA":
             p_pc = float((data_imp.loc[pc, TARGET] == 0).mean()) if pc.any() else np.nan
             fd = p_no - p_pc
             st.pyplot(charts.fig_fd_bar(p_no, p_pc, fd), clear_figure=True)
-    
+
         elif choice == "FD (Computador) - Interacción":
             fig = charts.fig_fd_interaction(data_imp)
-            if fig is not None:
-                st.pyplot(fig, clear_figure=True)
-            else:
-                st.info("No se pudo construir la figura de interacción.")
-    
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de interacción.")
+
         elif choice == "KCC (Educación madre) - Barras":
             low_mom = data_imp["F_EDUCACIONMADRE"].isin(["Ninguno","Primaria incompleta","Primaria completa"])
             high_mom = data_imp["F_EDUCACIONMADRE"].isin(["Educación profesional completa","Postgrado","Posgrado","Postgrado completo"])
@@ -297,27 +304,24 @@ elif page == "EDA":
             p_high = float((data_imp.loc[high_mom, TARGET] == 0).mean()) if high_mom.any() else np.nan
             kcc = p_low - p_high
             st.pyplot(charts.fig_kcc_bar(p_low, p_high, kcc), clear_figure=True)
-    
+
         elif choice == "KCC (Educación madre) - Distribución":
             fig = charts.fig_kcc_mother_education(data_imp)
-            if fig is not None:
-                st.pyplot(fig, clear_figure=True)
-            else:
-                st.info("No se pudo construir la figura de educación de la madre.")
-    
+            st.pyplot(fig, clear_figure=True) if fig is not None else st.info("No se pudo construir la figura de educación de la madre.")
+
         elif choice == "Riesgo regional (pérdida)":
             regional_risk = data_imp.groupby("REGION")[TARGET].apply(lambda x: (x == 0).mean()).sort_values()
             st.pyplot(charts.fig_regional_risk(regional_risk), clear_figure=True)
-    
+
         elif choice == "Impacto Top-10 (casos)":
             st.pyplot(charts.fig_top10_impact(kpi_pack["kpi_dept"], top_n=10), clear_figure=True)
-    
+
         elif choice == "Impacto (burbuja riesgo vs casos)":
             st.pyplot(
                 charts.fig_impact_risk_bubble(kpi_pack["kpi_dept"], p_nat=kpi_pack.get("p_nat"), top_n=40),
                 clear_figure=True
             )
-    
+
         elif choice == "Impacto por región (casos)":
             st.pyplot(charts.fig_region_impact_cases(kpi_pack["kpi_region"]), clear_figure=True)
 
@@ -326,10 +330,9 @@ elif page == "Groq IA":
     st.title("Groq IA")
 
     try:
-        # Consejo: NO pase dataframes completos al LLM si no es necesario
         render_groq_page(bundle=bundle, kpi_pack=kpi_pack)
-
     except Exception as e:
         st.error("Falló la página de Groq IA. Revise el detalle abajo.")
-        st.exception(e)  # muestra traceback completo en la UI
+        st.exception(e)
         st.stop()
+
