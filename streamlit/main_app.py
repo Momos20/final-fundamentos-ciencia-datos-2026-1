@@ -44,19 +44,29 @@ def build_bundle(df: pd.DataFrame) -> dict:
 # -------------------------
 # Sidebar
 # -------------------------
+# Sidebar
 st.sidebar.title("Menú")
 uploaded = st.sidebar.file_uploader("Subir saber_pro.csv", type=["csv"])
 
-page = st.sidebar.selectbox(
-    "Navegación",
-    ["Resumen", "Procesamiento", "KPI", "EDA", "Groq IA"],
-    index=0
-)
+# ✅ Validación de nombre (tolerante: mayúsculas/minúsculas)
+EXPECTED_NAME = "saber_pro.csv"
 
-if not uploaded:
+if uploaded is None:
     st.title("Saber Pro — Streamlit")
     st.info("Cargue el archivo **saber_pro.csv** para comenzar.")
     st.stop()
+
+# Si el usuario sube otro csv, no se procesa
+uploaded_name = (uploaded.name or "").strip()
+if uploaded_name.lower() != EXPECTED_NAME.lower():
+    st.title("Saber Pro — Streamlit")
+    st.warning(
+        f"El archivo cargado se llama **{uploaded_name}**.\n\n"
+        f"Este tablero espera **{EXPECTED_NAME}**. "
+        "Por favor cargue el dataset indicado."
+    )
+    st.stop()
+
 
 
 # -------------------------
