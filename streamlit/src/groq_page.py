@@ -5,7 +5,7 @@ import streamlit as st
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-def groq_chat_completion(api_key: str, model: str, messages: list, temperature: float = 0.2, max_tokens: int = 600):
+def groq_chat_completion(api_key: str, model: str, messages: list, temperature: float = 0.2, max_tokens: int = 1500):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
