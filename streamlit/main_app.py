@@ -304,4 +304,13 @@ elif page == "EDA":
 
 
 elif page == "Groq IA":
-    render_groq_page(bundle=bundle, kpi_pack=kpi_pack)
+    st.title("Groq IA")
+
+    try:
+        # Consejo: NO pase dataframes completos al LLM si no es necesario
+        render_groq_page(bundle=bundle, kpi_pack=kpi_pack)
+
+    except Exception as e:
+        st.error("Falló la página de Groq IA. Revise el detalle abajo.")
+        st.exception(e)  # muestra traceback completo en la UI
+        st.stop()
