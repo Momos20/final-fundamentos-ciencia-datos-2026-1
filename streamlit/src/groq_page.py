@@ -7,12 +7,16 @@ import streamlit as st
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# Parámetros fijos (no editables por el usuario)
+FIXED_TEMPERATURE = 1.0
+FIXED_MAX_TOKENS = 1800
+
 
 def get_groq_key() -> str:
     """
     Obtiene la API Key de forma segura:
-    1) Streamlit Secrets (ideal para Streamlit Community Cloud)
-    2) Variable de entorno (ideal para local/otros despliegues)
+    1) Streamlit Secrets (Community Cloud)
+    2) Variable de entorno
     3) Retorna "" si no existe
     """
     try:
@@ -20,20 +24,13 @@ def get_groq_key() -> str:
             key = st.secrets["GROQ_API_KEY"]
             return key.strip() if isinstance(key, str) else ""
     except Exception:
-        # Si st.secrets no está disponible por algún motivo, seguimos al env var
         pass
 
     key = os.getenv("GROQ_API_KEY", "")
     return key.strip() if isinstance(key, str) else ""
 
 
-def groq_chat_completion(
-    api_key: str,
-    model: str,
-    messages: list,
-    temperature: float = 0.2,
-    max_tokens: int = 1500,
-):
+def groq_chat_completion(api_key: str, model: str, messages: list):
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -41,10 +38,15 @@ def groq_chat_completion(
     payload = {
         "model": model,
         "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
+        "temperature": FIXED_TEMPERATURE,
+        "max_tokens": FIXED_MAX_TOKENS,
     }
-    r = requests.post(GROQ_API_URL, headers=headers, data=json.dumps(payload), timeout=60)
+    r = requests.post(
+        GROQ_API_URL,
+        headers=headers,
+        data=json.dumps(payload),
+        timeout=60,
+    )
     r.raise_for_status()
     return r.json()
 
@@ -60,15 +62,15 @@ def build_dataset_brief(bundle: dict, kpi_pack: dict) -> str:
     lines.append(f"- Kruskal (N_NULOS vs target) p-value: {bundle.get('kw_p')}")
     lines.append(f"- Dataset procesado: filas {data_imp.shape[0]}, columnas {data_imp.shape[1]}")
 
-    if "p_nat" in kpi_pack and kpi_pack["p_nat"] is not None:
+    if kpi_pack.get("p_nat") is not None:
         lines.append(f"- P(nacional) bajo: {kpi_pack['p_nat']*100:.2f}%")
-    if "KRAS" in kpi_pack and kpi_pack["KRAS"] is not None:
+    if kpi_pack.get("KRAS") is not None:
         lines.append(f"- KRAS (pp): {kpi_pack['KRAS']*100:.2f}")
-    if "FD" in kpi_pack and kpi_pack["FD"] is not None:
+    if kpi_pack.get("FD") is not None:
         lines.append(f"- FD (pp): {kpi_pack['FD']*100:.2f}")
-    if "KCC" in kpi_pack and kpi_pack["KCC"] is not None:
+    if kpi_pack.get("KCC") is not None:
         lines.append(f"- KCC (pp): {kpi_pack['KCC']*100:.2f}")
-    if "KDS" in kpi_pack and kpi_pack["KDS"] is not None:
+    if kpi_pack.get("KDS") is not None:
         lines.append(f"- KDS: {kpi_pack['KDS']:.4f}")
 
     return "\n".join(lines)
@@ -86,17 +88,13 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
     with st.sidebar:
         st.subheader("Configuración Groq")
 
-        # 1) Intentar cargar desde Secrets / env var
         api_key = get_groq_key()
 
-        # 2) Si existe, no pedirla; si no, permitir input manual (fallback)
-        if api_key:
-            st.success("API Key cargada desde Secrets / entorno")
-        else:
+        if not api_key:
             api_key = st.text_input(
                 "Groq API Key",
                 type="password",
-                help="No se encontró GROQ_API_KEY en Secrets ni en el entorno. Se usará solo en esta sesión.",
+                help="Clave usada solo en esta sesión si no existe en Secrets o variables de entorno.",
             )
 
         model = st.selectbox(
@@ -108,12 +106,13 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             index=0,
         )
 
-        temperature = st.slider("Temperature", 0.0, 1.0, 0.2, 0.05)
-        max_tokens = st.slider("Max tokens", 100, 1500, 600, 50)
-        include_context = st.checkbox("Incluir contexto del dataset (recomendado)", value=True)
+        include_context = st.checkbox(
+            "Incluir contexto del dataset (recomendado)",
+            value=True,
+        )
 
     # -------------------------
-    # Chat state
+    # Estado del chat
     # -------------------------
     if "groq_chat" not in st.session_state:
         st.session_state.groq_chat = []
@@ -123,24 +122,29 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    user_msg = st.chat_input("Escriba una pregunta (ej: 'Redacte 5 insights ejecutivos para MinEducación')")
+    user_msg = st.chat_input(
+        "Escriba una pregunta (ej: 'Redacte 5 insights ejecutivos para MinEducación')"
+    )
 
     if user_msg:
-        # Validación final
         if not api_key:
-            st.error("No se encontró una Groq API Key válida (Secrets/entorno/input).")
+            st.error("No se encontró una Groq API Key válida.")
             return
 
         system = (
             "Usted es un analista de datos senior. Responda en español, claro y accionable. "
-            "Cuando proponga hallazgos, evite causalidad (solo asociaciones) y sugiera evidencia cuantitativa."
+            "Evite causalidad (solo asociaciones) y respalde con evidencia cuantitativa."
         )
 
         messages = [{"role": "system", "content": system}]
 
         if include_context:
-            brief = build_dataset_brief(bundle, kpi_pack)
-            messages.append({"role": "system", "content": brief})
+            messages.append(
+                {
+                    "role": "system",
+                    "content": build_dataset_brief(bundle, kpi_pack),
+                }
+            )
 
         history = st.session_state.groq_chat[-10:]
         messages.extend(history)
@@ -155,20 +159,25 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
                 api_key=api_key,
                 model=model,
                 messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
             )
             assistant_text = resp["choices"][0]["message"]["content"]
 
-            st.session_state.groq_chat.append({"role": "assistant", "content": assistant_text})
+            st.session_state.groq_chat.append(
+                {"role": "assistant", "content": assistant_text}
+            )
             with st.chat_message("assistant"):
                 st.markdown(assistant_text)
 
         except requests.HTTPError as e:
-            st.error(f"Error HTTP Groq: {e}\n\nDetalle: {getattr(e.response, 'text', '')}")
+            st.error(
+                f"Error HTTP Groq: {e}\n\nDetalle: {getattr(e.response, 'text', '')}"
+            )
         except Exception as e:
             st.error(f"Error: {e}")
 
+    # -------------------------
+    # Acciones rápidas
+    # -------------------------
     st.markdown("---")
     st.subheader("Acciones rápidas (prompts)")
     c1, c2, c3 = st.columns(3)
@@ -178,7 +187,10 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             st.session_state.groq_chat.append(
                 {
                     "role": "user",
-                    "content": "Redacte 7 insights ejecutivos accionables (no causales) para MinEducación basados en KRAS/FD/KCC/KDS y territorio.",
+                    "content": (
+                        "Redacte 7 insights ejecutivos accionables (no causales) "
+                        "para MinEducación basados en KRAS/FD/KCC/KDS y territorio."
+                    ),
                 }
             )
             st.rerun()
@@ -188,7 +200,11 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             st.session_state.groq_chat.append(
                 {
                     "role": "user",
-                    "content": "Proponga 5 líneas de intervención (conectividad, tutorías, focalización territorial) priorizadas por impacto y equidad. Justifique con números.",
+                    "content": (
+                        "Proponga 5 líneas de intervención (conectividad, tutorías, "
+                        "focalización territorial) priorizadas por impacto y equidad. "
+                        "Justifique con números."
+                    ),
                 }
             )
             st.rerun()
@@ -198,7 +214,10 @@ def render_groq_page(bundle: dict, kpi_pack: dict):
             st.session_state.groq_chat.append(
                 {
                     "role": "user",
-                    "content": "Sugiera próximos análisis estadísticos/ML (sin implementarlos) que complementen este diagnóstico, indicando variables y métricas.",
+                    "content": (
+                        "Sugiera próximos análisis estadísticos/ML (sin implementarlos) "
+                        "que complementen este diagnóstico, indicando variables y métricas."
+                    ),
                 }
             )
             st.rerun()
