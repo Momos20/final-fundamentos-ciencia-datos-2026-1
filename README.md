@@ -15,6 +15,11 @@ En este proyecto se plantea el uso de técnicas de ciencia de datos para analiza
 - Juan Manuel Agudelo Olarte
 - Carlos José Muñoz Cabrera
 
+## Set de datos
+
+El set de datos que vamos a utilizar es [Saber Pro](https://drive.google.com/file/d/11I74e9DOLzR0_7XOV5Hr4ZaEsvjIbWR1/view?usp=sharing).
+El dataset Saber Pro (2018-2021) incluye resultados de rendimiento, indicadores numéricos de la prueba y factores socioeconómicos/territoriales del alumnado (nivel socioeconómico, acceso a tecnología, educación recibida por los padres, programa y departamento).
+
 ## Streamlit
 
 Para acceder a la aplicación de streamlit, hacer clic en [SaberPro](https://final-fundamentos-ciencia-datos.streamlit.app/)
