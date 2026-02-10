@@ -8,6 +8,26 @@ El ICFES (Instituto Colombiano para la Evaluación de la Calidad de la Educació
 
 En este proyecto se plantea el uso de técnicas de ciencia de datos para analizar los resultados de las Pruebas Saber Pro de estudiantes entre 2018 y 2021, enriqueciendo los datos con el perfil socioeconómico proporcionado por el ICFES. El propósito es encontrar patrones y variables socioeconómicas que se relacionen significativamente con el rendimiento académico de los estudiantes y así contribuir con evidencia para el análisis y la toma de decisiones en el campo de la educación.
 
+##  Estructura del repositorio
+
+```
+Auditoría/
+│-- Prueba_Saber_Pro_Colombia.ipynb
+│-- streamlit/
+│   └── src/
+│       ├── charts.py
+│       ├── data.py
+│       ├── eda.py
+│       ├── groq_page.py
+│       ├── kpis.py
+│       ├── ui.py
+│   ├── main_app.py
+│   ├── mappings.py
+│-- requirements.txt
+│-- README.md
+
+```
+
 ## Miembros del equipo
 
 - Miguel Roldan Yepes
