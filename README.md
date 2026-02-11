@@ -25,7 +25,7 @@ En este proyecto se usan técnicas de ciencia de datos para analizar los resulta
 
 ```
 final-fundamentos-ciencia-datos-2026-1/
-├── Auditoría e Informe/
+├── Auditoría/
 │   └── Prueba_Saber_Pro_Colombia.ipynb
 ├── streamlit/
 │   ├── main_app.py
